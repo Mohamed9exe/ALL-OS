@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" id="app-root" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="site-title">All-OS - متحف محاكاة أنظمة التشغيل الشامل</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='2' y='3' width='20' height='14' rx='2'/><line x1='8' y1='21' x2='16' y2='21'/><line x1='12' y1='17' x2='12' y2='21'/></svg>">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts (Cairo & Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Cairo', 'Inter', 'Segoe UI', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --screen-brightness: 1;
+            --primary-color: #0284c7;
+            --primary-hover: #0369a1;
+            --accent-color: #38bdf8;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            overflow: hidden;
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 4px;
+        }
+
+        .glass-header {
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        .system-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .system-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .system-card.active {
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.25) 0%, rgba(14, 165, 233, 0.1) 100%);
+            border-color: var(--accent-color);
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
+        }
+
+        /* CRT Scanlines Overlay */
+        .crt-overlay::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            z-index: 15;
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+        }
+
+        .emulator-viewport {
+            filter: brightness(var(--screen-brightness));
+        }
+
+        .loader-spin {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse-green {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.1); }
+        }
+        .live-dot {
+            animation: pulse-green 1.5s infinite;
+        }
+
+        /* --- 3 Themes & Light/Dark Modes --- */
+        /* 1. Original Theme */
+        body.theme-original.dark-mode { background-color: #030712 !important; color: #f8fafc !important; }
+        body.theme-original.light-mode { background-color: #f8fafc !important; color: #0f172a !important; }
+
+        /* 2. Aero Glass Theme */
+        body.theme-aero.dark-mode { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0f172a 100%) !important; color: #e2e8f0 !important; }
+        body.theme-aero.light-mode { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #e0f2fe 100%) !important; color: #0369a1 !important; }
+
+        /* 3. Retro 32-bit Theme */
+        body.theme-retro.dark-mode { background-color: #005555 !important; color: #ffffff !important; }
+        body.theme-retro.light-mode { background-color: #008080 !important; color: #ffffff !important; }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col antialiased select-none theme-original dark-mode transition-colors" id="app-body">
+
+    <!-- Top Header -->
+    <header id="main-header" class="h-16 glass-header bg-slate-900/90 border-b border-slate-800 px-4 flex items-center justify-between z-30 shrink-0 transition-colors">
+        <div class="flex items-center gap-3">
+            <button onclick="toggleSidebar()" class="p-2 rounded-xl hover:bg-slate-800/60 text-slate-300 transition" title="القائمة الجانبية">
+                <i data-lucide="menu" class="w-5 h-5"></i>
+            </button>
+            <div class="flex items-center gap-2.5 cursor-pointer" onclick="goHome()">
+                <div class="w-10 h-10 bg-gradient-to-tr from-sky-500 via-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-sky-500/20 ring-1 ring-white/20">
+                    <i data-lucide="layers" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-black tracking-wider leading-none bg-gradient-to-r from-sky-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">All-OS</h1>
+                    <p class="text-[10px] text-sky-400 font-bold uppercase tracking-widest hidden sm:block">متحف أنظمة التشغيل</p>
+                </div>
+            </div>
+
+            <!-- Live Counter Badge -->
+            <div id="live-badge" class="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/60 border border-slate-800 text-xs font-bold text-slate-300 ml-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 live-dot"></span>
+                <span>إجمالي الأنظمة: <strong class="text-emerald-400" id="header-total-count">0</strong></span>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="relative w-44 sm:w-80">
+            <input type="text" id="search-input" oninput="filterSystems()" placeholder="ابحث عن أي نظام تشغيل أو لعبة..." 
+                   class="w-full bg-slate-900/80 text-xs rounded-full pl-3 pr-9 py-2 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 transition">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute right-3 top-2.5"></i>
+        </div>
+
+        <!-- Action Controls & Settings -->
+        <div class="flex items-center gap-2">
+            <button onclick="openTimelineModal()" class="p-2 rounded-xl hover:bg-slate-800/60 text-sky-400 transition flex items-center gap-1.5 text-xs font-bold" title="التاريخ والزمن">
+                <i data-lucide="calendar" class="w-4 h-4"></i>
+                <span class="hidden md:inline">التاريخ</span>
+            </button>
+            <button onclick="toggleFavFilter()" id="fav-filter-btn" class="p-2 rounded-xl hover:bg-slate-800/60 text-yellow-400 transition flex items-center gap-1.5 text-xs font-bold" title="المفضلة">
+                <i data-lucide="star" class="w-4 h-4"></i>
+                <span class="hidden md:inline">المفضلة</span>
+            </button>
+            <button onclick="toggleCRTMode()" id="crt-btn" class="p-2 rounded-xl hover:bg-slate-800/60 text-slate-300 transition" title="وضع شاشة CRT">
+                <i data-lucide="tv" class="w-5 h-5"></i>
+            </button>
+            <button onclick="openSettingsModal()" class="p-2 rounded-xl hover:bg-slate-800/60 text-slate-300 transition" title="الإعدادات">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Category Pills Bar -->
+    <div id="cat-bar" class="bg-slate-900/90 border-b border-slate-800 px-4 py-2 flex items-center gap-2 overflow-x-auto text-xs z-20 shrink-0 transition-colors">
+        <button onclick="setCategory('all')" class="cat-pill active px-3.5 py-1.5 rounded-full bg-sky-600 text-white font-bold hover:bg-sky-500 transition whitespace-nowrap" data-cat="all">الكل (<span id="count-all">0</span>)</button>
+        <button onclick="setCategory('windows')" class="cat-pill px-3.5 py-1.5 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap" data-cat="windows">💻 Windows (<span id="count-windows">0</span>)</button>
+        <button onclick="setCategory('apple')" class="cat-pill px-3.5 py-1.5 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap" data-cat="apple">🍎 Apple / Mac (<span id="count-apple">0</span>)</button>
+        <button onclick="setCategory('linux')" class="cat-pill px-3.5 py-1.5 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap" data-cat="linux">🐧 Linux & Unix (<span id="count-linux">0</span>)</button>
+        <button onclick="setCategory('beos')" class="cat-pill px-3.5 py-1.5 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap" data-cat="beos">💎 BeOS & Amiga (<span id="count-beos">0</span>)</button>
+        <button onclick="setCategory('dos')" class="cat-pill px-3.5 py-1.5 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap" data-cat="dos">📟 DOS Systems (<span id="count-dos">0</span>)</button>
+        <button onclick="setCategory('experimental')" class="cat-pill px-3.5 py-1.5 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap" data-cat="experimental">🧪 Experimental & Games (<span id="count-experimental">0</span>)</button>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex overflow-hidden relative">
+        
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="w-80 bg-slate-900/95 border-l border-slate-800 flex flex-col shrink-0 transition-all duration-300 z-20 overflow-hidden">
+            <div id="systems-list" class="flex-1 overflow-y-auto p-2.5 space-y-1.5">
+                <!-- Dynamic Lists Injected via JavaScript -->
+            </div>
+        </aside>
+
+        <!-- Emulator Viewport & Container -->
+        <main id="emulator-container" class="flex-1 flex flex-col bg-black relative overflow-hidden emulator-viewport">
+            
+            <!-- Toolbar for Active Emulator -->
+            <div id="toolbar" class="h-10 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between text-xs text-slate-300 z-10 shrink-0">
+                <div class="flex items-center gap-3">
+                    <span id="active-system-name" class="font-bold text-sky-400 flex items-center gap-1.5">
+                        <i data-lucide="monitor" class="w-4 h-4"></i> <span>لم يتم اختيار نظام</span>
+                    </span>
+                    <button id="active-fav-btn" onclick="toggleActiveFav()" class="hidden text-yellow-400 hover:scale-110 transition" title="المفضلة">
+                        <i data-lucide="star" class="w-4 h-4"></i>
+                    </button>
+                    <button id="wiki-btn" onclick="openWikiModal()" class="hidden bg-sky-600/20 border border-sky-500/40 text-sky-400 px-2 py-0.5 rounded-md hover:bg-sky-600 hover:text-white transition flex items-center gap-1 font-bold">
+                        <i data-lucide="info" class="w-3.5 h-3.5"></i> <span>أرشيف ويكيبيديا</span>
+                    </button>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <button onclick="reloadFrame()" class="p-1.5 hover:bg-slate-800 rounded-lg transition flex items-center gap-1" title="إعادة تشغيل المحاكي">
+                        <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+                        <span class="hidden sm:inline">إعادة تشغيل</span>
+                    </button>
+                    <button onclick="openExternal()" class="p-1.5 hover:bg-slate-800 rounded-lg transition flex items-center gap-1" title="فتح في نافذة جديدة">
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                        <span class="hidden sm:inline">فتح منفصل</span>
+                    </button>
+                    <button onclick="toggleFullscreen()" class="p-1.5 hover:bg-slate-800 rounded-lg transition flex items-center gap-1 text-sky-400 font-bold" title="ملء الشاشة">
+                        <i data-lucide="maximize" class="w-3.5 h-3.5"></i>
+                        <span class="hidden sm:inline">ملء الشاشة</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loader Indicator -->
+            <div id="loader" class="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center z-20 transition-opacity duration-300 pointer-events-none opacity-0">
+                <div class="relative flex items-center justify-center mb-4">
+                    <div class="w-16 h-16 border-4 border-sky-500/20 border-t-sky-500 rounded-full loader-spin"></div>
+                    <i data-lucide="cpu" class="w-6 h-6 text-sky-400 absolute"></i>
+                </div>
+                <h3 id="loader-text" class="text-sm font-semibold text-slate-200">جاري تحميل المحاكي...</h3>
+                <p class="text-xs text-slate-500 mt-1">يتم التشغيل فورياً ومباشرة عبر المتصفح</p>
+            </div>
+
+            <!-- Enhanced Museum Control Center Welcome Screen -->
+            <div id="welcome-screen" class="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col p-6 sm:p-10 z-10 overflow-y-auto">
+                <div class="max-w-5xl w-full mx-auto my-auto space-y-8">
+                    
+                    <!-- Top Dashboard Header -->
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2.5 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-400 text-[11px] font-bold tracking-wider uppercase flex items-center gap-1.5">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-400 live-dot"></span> متحف الأنظمة والتشغيل الشامل
+                                </span>
+                            </div>
+                            <h2 class="text-2xl sm:text-4xl font-black text-white tracking-wide">
+                                👾All-OS👾
+                            </h2>
+                            <p class="text-xs sm:text-sm text-slate-400 font-medium">
+                                استكشف وشغل مئات أنظمة التشغيل التاريخية، التوزيعات الحديثة، وألعاب الريترو العريقة مباشرة من متصفحك وبدون أي تثبيت.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-3 bg-slate-900/80 border border-slate-800 p-3 rounded-2xl shadow-xl">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold">
+                                <i data-lucide="cpu" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <span class="text-[10px] text-slate-400 block">حالة الخوادم الحية</span>
+                                <strong class="text-xs text-emerald-400" id="dash-val-systems">110+ نظام وإصدار</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Categories Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        
+                        <!-- Windows Card -->
+                        <div onclick="setCategory('windows')" class="group p-5 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-sky-500/50 cursor-pointer transition shadow-lg hover:shadow-sky-500/10 space-y-3">
+                            <div class="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 group-hover:scale-110 transition">
+                                <i data-lucide="monitor" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-sm text-white group-hover:text-sky-400 transition">أنظمة Windows</h3>
+                                <p class="text-[11px] text-slate-400 mt-0.5">من Windows 1.01 حتى أحدث التصاميم التجريبية</p>
+                            </div>
+                        </div>
+
+                        <!-- Apple Mac Card -->
+                        <div onclick="setCategory('apple')" class="group p-5 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-sky-500/50 cursor-pointer transition shadow-lg hover:shadow-sky-500/10 space-y-3">
+                            <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition">
+                                <i data-lucide="apple" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-sm text-white group-hover:text-indigo-400 transition">Apple & Macintosh</h3>
+                                <p class="text-[11px] text-slate-400 mt-0.5">من System 1 حتى أنظمة ماك الكلاسيكية</p>
+                            </div>
+                        </div>
+
+                        <!-- Linux Card -->
+                        <div onclick="setCategory('linux')" class="group p-5 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-sky-500/50 cursor-pointer transition shadow-lg hover:shadow-sky-500/10 space-y-3">
+                            <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition">
+                                <i data-lucide="terminal" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-sm text-white group-hover:text-emerald-400 transition">Linux & Unix & BSD</h3>
+                                <p class="text-[11px] text-slate-400 mt-0.5">أبونتو، دبيان، كالي وأنظمة السيرفرات الآمنة</p>
+                            </div>
+                        </div>
+
+                        <!-- Retro Games Card -->
+                        <div onclick="setCategory('experimental')" class="group p-5 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-sky-500/50 cursor-pointer transition shadow-lg hover:shadow-sky-500/10 space-y-3">
+                            <div class="w-12 h-12 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400 group-hover:scale-110 transition">
+                                <i data-lucide="gamepad-2" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-sm text-white group-hover:text-yellow-400 transition">ألعاب الريترو والفلاش</h3>
+                                <p class="text-[11px] text-slate-400 mt-0.5">متاحف ألعاب التسعينات ودوس زون العريقة</p>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Bottom Info Banner -->
+                    <div class="p-4 rounded-2xl bg-slate-900/40 border border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="shield-check" class="w-4 h-4 text-sky-400"></i>
+                            <span>جميع المحاكيات تعمل عبر برمجيات v86 وتقنيات الويب الحديثة مباشرة.</span>
+                        </div>
+                        <button onclick="openTimelineModal()" class="text-sky-400 font-bold hover:underline flex items-center gap-1">
+                            عرض التسلسل الزمني الكامل <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Frame Viewer -->
+            <iframe id="emulator-frame" class="w-full h-full border-none bg-black relative z-0" allow="autoplay; fullscreen; clipboard-read; clipboard-write; gamepad" title="OS Emulator"></iframe>
+
+        </main>
+    </div>
+
+    <!-- Timeline Archive Modal -->
+    <div id="timeline-modal" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center hidden p-4">
+        <div id="timeline-box" class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-3xl p-6 space-y-5 text-slate-200 shadow-2xl relative max-h-[85vh] flex flex-col">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="calendar" class="w-5 h-5 text-sky-400"></i>
+                    <h3 class="text-base font-bold">التسلسل الزمني والتاريخي الكامل لأنظمة التشغيل</h3>
+                </div>
+                <button onclick="closeTimelineModal()" class="p-1 hover:bg-slate-800 rounded-lg"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <div id="timeline-list-container" class="flex-1 overflow-y-auto space-y-4 pr-2">
+                <!-- Dynamically populated timeline entries -->
+            </div>
+
+            <div class="pt-2 border-t border-slate-800 text-center shrink-0">
+                <button onclick="closeTimelineModal()" class="w-full py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition">إغلاق الأرشيف التاريخي</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wiki Archive Modal -->
+    <div id="wiki-modal" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center hidden p-4">
+        <div id="wiki-box" class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg p-6 space-y-4 text-slate-200 shadow-2xl relative">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="book-open" class="w-5 h-5 text-sky-400"></i>
+                    <h3 id="wiki-title" class="text-base font-bold">أرشيف ويكيبيديا للنظام</h3>
+                </div>
+                <button onclick="closeWikiModal()" class="p-1 hover:bg-slate-800 rounded-lg text-slate-400"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="space-y-3 text-xs leading-relaxed">
+                <div class="grid grid-cols-2 gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800 text-slate-300">
+                    <div><span class="text-slate-500">سنة الإصدار:</span> <strong id="wiki-year" class="text-sky-400">--</strong></div>
+                    <div><span class="text-slate-500">الشركة المطورّة:</span> <strong id="wiki-vendor" class="text-sky-400">--</strong></div>
+                </div>
+                <div class="p-3 bg-slate-950/60 rounded-xl border border-slate-800 max-h-60 overflow-y-auto">
+                    <h4 class="font-bold text-slate-300 mb-1">القصة والتاريخ (من ويكيبيديا):</h4>
+                    <p id="wiki-desc" class="text-slate-300 leading-relaxed">--</p>
+                </div>
+            </div>
+            <button onclick="closeWikiModal()" class="w-full py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition">إغلاق الأرشيف</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center hidden p-4">
+        <div id="settings-box" class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-5 text-slate-200 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold flex items-center gap-2">
+                    <i data-lucide="settings" class="w-5 h-5 text-sky-400"></i> <span>إعدادات All-OS</span>
+                </h3>
+                <button onclick="closeSettingsModal()" class="p-1 hover:bg-slate-800 rounded-lg"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <!-- Light / Dark Mode Toggle -->
+            <div class="space-y-2">
+                <label class="text-xs font-bold text-slate-400">وضع الإضاءة (Light / Dark Mode)</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="setMode('dark')" id="mode-dark-btn" class="p-2.5 border rounded-xl flex items-center justify-center gap-2 text-xs font-bold bg-sky-600/20 border-sky-500 text-sky-400">
+                        <i data-lucide="moon" class="w-4 h-4"></i> الوضع الداكن
+                    </button>
+                    <button onclick="setMode('light')" id="mode-light-btn" class="p-2.5 border rounded-xl flex items-center justify-center gap bg-white-2 text-xs font-bold border-slate-200 text-slate-900">
+                        <i data-lucide="sun" class="w-4 h-4"></i> الوضع الفاتح
+                    </button>
+                </div>
+            </div>
+
+            <!--3 Custom Themes Picker -->
+            <div class="space-y-2">
+            <!-- Brightness Slider -->
+            <div class="space-y-2">
+                <div class="flex justify-between items-center text-xs font-bold">
+                    <span class="text-slate-400">سطوع شاشة المحاكي</span>
+                    <span id="bright-val" class="text-sky-400">100%</span>
+                </div>
+                <input type="range" id="bright-slider" min="0.3" max="1.5" step="0.1" value="1" oninput="changeBrightness(this.value)" class="w-full accent-sky-500 cursor-pointer">
+            </div>
+
+            <div class="pt-2 border-t border-slate-800 text-center">
+                <button onclick="closeSettingsModal()" class="w-full py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition">حفظ وإغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Data and Logic -->
+    <script>
+        const systemsData = [
+            // --- WINDOWS (21 Links) ---
+            { id: 'win1', name: 'Windows 1.01', year: '1985', vendor: 'Microsoft', desc: 'أول إصدار من بيئة ويندوز الرسومية التي أطلقتها مايكروسوفت لتعمل فوق نظام MS-DOS.', cat: 'windows', icon: 'monitor', url: 'https://copy.sh/v86/?profile=windows1' },
+            { id: 'win2', name: 'Windows 2.0', year: '1987', vendor: 'Microsoft', desc: 'إصدار تميز بإمكانية تداخل النوافذ واستخدام اختصارات الكيبورد المتقدمة.', cat: 'windows', icon: 'monitor', url: 'https://copy.sh/v86/?profile=windows2' },
+            { id: 'win30', name: 'Windows 3.0', year: '1990', vendor: 'Microsoft', desc: 'أول إصدار يحقق نجاحاً تجارياً واسعاً بفضل مدير البرامج والأيقونات الملونة.', cat: 'windows', icon: 'monitor', url: 'https://copy.sh/v86/?profile=windows30' },
+            { id: 'win31', name: 'Windows 3.1', year: '1992', vendor: 'Microsoft', desc: 'قدم خطوط TrueType ودعم الصوت ولعبة ألغام الشهيرة بشكل موسع.', cat: 'windows', icon: 'monitor', url: 'https://copy.sh/v86/?profile=windows31' },
+            { id: 'win93', name: 'Windows 93', year: '2014', vendor: 'Indie Web', desc: 'نسخة ويب ساخرة وممتعة ممتلئة بالألعاب الكلاسيكية والتأثيرات الصوتية.', cat: 'windows', icon: 'sparkles', url: 'https://windows93.net/' },
+            { id: 'win95', name: 'Windows 95', year: '1995', vendor: 'Microsoft', desc: 'الثورة التاريخية التي قدمت قائمة ابدأ (Start Menu) وشريط المهام لأول مرة.', cat: 'windows', icon: 'layout-grid', url: 'https://copy.sh/v86/?profile=windows95' },
+            { id: 'win96', name: 'Windows 96', year: '2020', vendor: 'Indie Web', desc: 'مشروع ويب متكامل يدمج بين بيئة 95 والنواة الحديثة لسطح المكتب.', cat: 'windows', icon: 'globe', url: 'https://windows96.net/' },
+            { id: 'win98', name: 'Windows 98', year: '1998', vendor: 'Microsoft', desc: 'تحسينات كبيرة ودعم USB ممتاز وتكامل متصفح Internet Explorer.', cat: 'windows', icon: 'layout-grid', url: 'https://copy.sh/v86/?profile=windows98' },
+            { id: 'win98web', name: 'Windows 98 (Web Edition)', year: '2021', vendor: 'Web Community', desc: 'محاكي ويب إضافي وسريع لويندوز 98 يعمل بتقنيات جافاسكريبت.', cat: 'windows', icon: 'globe', url: 'https://win98.si/' },
+            { id: 'winme', name: 'Windows ME', year: '2000', vendor: 'Microsoft', desc: 'آخر إصدار من عائلة Windows 9x الموجهة للمستخدم المنزلي.', cat: 'windows', icon: 'layout-grid', url: 'https://copy.sh/v86/?profile=windows-me' },
+            { id: 'winnt3', name: 'Windows NT 3.1', year: '1993', vendor: 'Microsoft', desc: 'أول إصدار من نواة NT المخصصة للأعمال وسيرفرات الشبكات 32-bit.', cat: 'windows', icon: 'server', url: 'https://copy.sh/v86/?profile=windowsnt3' },
+            { id: 'winnt35', name: 'Windows NT 3.5', year: '1994', vendor: 'Microsoft', desc: 'تحديث ممتاز استهدف زيادة السرعة واستقرار الشبكات.', cat: 'windows', icon: 'server', url: 'https://copy.sh/v86/?profile=windowsnt35' },
+            { id: 'winnt4', name: 'Windows NT 4.0', year: '1996', vendor: 'Microsoft', desc: 'دمج واجهة ويندوز 95 مع نواة NT القوية والأمنة.', cat: 'windows', icon: 'server', url: 'https://copy.sh/v86/?profile=windowsnt4' },
+            { id: 'win2000', name: 'Windows 2000', year: '2000', vendor: 'Microsoft', desc: 'نظام الأعمال الذهبي القائم على نواة NT 5.0 ذات الاستقرار الفائق.', cat: 'windows', icon: 'server', url: 'https://copy.sh/v86/?profile=windows2000' },
+            { id: 'winxp', name: 'Windows XP', year: '2001', vendor: 'Microsoft', desc: 'أشهر نظام تشغيل في التاريخ بثيم Luna الأزرق الاستثنائي.', cat: 'windows', icon: 'monitor', url: 'https://win32.run/' },
+            { id: 'win7', name: 'Windows 7', year: '2009', vendor: 'Microsoft', desc: 'نظام Aero الزجاجي المحبوب الذي أصلح مشاكل ويندوز فيستا.', cat: 'windows', icon: 'monitor', url: 'https://win7simu.visnalize.com/' },
+            { id: 'win8', name: 'Windows 8', year: '2012', vendor: 'Microsoft', desc: 'التغيير الشامل نحو واجهة المربعات (Metro) المخصصة للشاشات اللمسية.', cat: 'windows', icon: 'layout-template', url: 'https://msradmin.github.io/windows8/start/index.html#' },
+            { id: 'win11', name: 'Windows 11', year: '2021', vendor: 'Microsoft', desc: 'الواجهة الحديثة بتصميم زجاجي منتصف وقائمة ابدأ المحدثة.', cat: 'windows', icon: 'laptop', url: 'https://win11.blueedge.me/' },
+            { id: 'win12mvp', name: 'Windows 12 MVP', year: '2024', vendor: 'Concept Project', desc: 'تصور تجريبي مستقبلي لما سيكون عليه نظام ويندوز 12.', cat: 'windows', icon: 'cpu', url: 'https://unofficialwindows12.lovable.app/' },
+            { id: 'win12demo', name: 'Windows 12 Demo', year: '2024', vendor: 'Concept Project', desc: 'واجهة ديمو استعراضية تفاعلية لويندوز 12 القادم.', cat: 'windows', icon: 'layers', url: 'https://lttthedev.github.io/desktop.html' },
+            { id: 'win13', name: 'Windows 13', year: '2025', vendor: 'Concept Project', desc: 'رؤية مستقبلية خيالية بالذكاء الاصطناعي لويندوز 13.', cat: 'windows', icon: 'rocket', url: 'https://windows-13.vercel.app/' },
+
+            // --- APPLE / MAC (38 Links) ---
+            { id: 'mac1', name: 'System 1.0', year: '1984', vendor: 'Apple', desc: 'نظام ماكنتوش الأصلي الذي غيّر مفهوم الحاسوب الشخصي.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/1984/System%201.0' },
+            { id: 'mac2', name: 'System 2.0', year: '1985', vendor: 'Apple', desc: 'تحديث تضمن دعم ملفات النظام وسرعة أعلى للمجلدات.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/1985/System%202.0' },
+            { id: 'mac21', name: 'System 2.1', year: '1985', vendor: 'Apple', desc: 'إصدار مخصص لدعم الأقراص الصلبة Hard Disk 20.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/1985/System%202.1' },
+            { id: 'mac3', name: 'System 3.0', year: '1986', vendor: 'Apple', desc: 'تقديم نظام الأقراص HFS والرموز الجديدة.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/1986/System%203.0' },
+            { id: 'mac5', name: 'System 5.0', year: '1987', vendor: 'Apple', desc: 'إدخال ميزة MultiFinder لتشغيل أكثر من تطبيق.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/1987/System%205.0' },
+            { id: 'mac6', name: 'System 6.0', year: '1988', vendor: 'Apple', desc: 'النظام الأكثر استقراراً وشهرة لأجهزة ماكنتوش القديمة.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/1988/System%206.0' },
+            { id: 'next08', name: 'NeXTStep 0.8', year: '1988', vendor: 'NeXT (Steve Jobs)', desc: 'النظام الذي طويره ستيف جوبز وبنيت عليه النواة الحديثة لـ macOS.', cat: 'apple', icon: 'box', url: 'https://infinitemac.org/1988/NeXTStep%200.8' },
+            { id: 'aux11', name: 'A/UX 1.1', year: '1989', vendor: 'Apple', desc: 'نظام يونكس المدمج بواجهة ماكنتوش الرسومية.', cat: 'apple', icon: 'terminal', url: 'https://infinitemac.org/1989/A%2FUX%201.1' },
+            { id: 'next10', name: 'NeXTStep 1.0', year: '1989', vendor: 'NeXT', desc: 'أول نظام كائني التوجه احتوى على أول متصفح ويب في العالم.', cat: 'apple', icon: 'box', url: 'https://infinitemac.org/1989/NeXTStep%201.0' },
+            { id: 'mac605', name: 'System 6.0.5', year: '1990', vendor: 'Apple', desc: 'إصدار محسن لدعم أجهزة Macintosh LC.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/1990/System%206.0.5' },
+            { id: 'aux20', name: 'A/UX 2.0', year: '1990', vendor: 'Apple', desc: 'تحديث نظام A/UX القائم على UNIX System V.', cat: 'apple', icon: 'terminal', url: 'https://infinitemac.org/1990/A%2FUX%202.0' },
+            { id: 'next20', name: 'NeXTStep 2.0', year: '1990', vendor: 'NeXT', desc: 'إصدار دعم ميزات البرمجة بالصوت والبريد المتطور.', cat: 'apple', icon: 'box', url: 'https://infinitemac.org/1990/NeXTStep%202.0' },
+            { id: 'mac70', name: 'System 7.0', year: '1991', vendor: 'Apple', desc: 'قفزة ماك الكبرى بالألوان الافتراضية والذاكرة التخيلية.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/1991/System%207.0' },
+            { id: 'aux30', name: 'A/UX 3.0', year: '1992', vendor: 'Apple', desc: 'آخر إصدارات أبل من أنظمة A/UX المبنية على يونكس.', cat: 'apple', icon: 'terminal', url: 'https://infinitemac.org/1992/A%2FUX%203.0' },
+            { id: 'next30', name: 'NeXTStep 3.0', year: '1992', vendor: 'NeXT', desc: 'إصدار يدعم معالجات x86 وبنية المعالجة الموزعة.', cat: 'apple', icon: 'box', url: 'https://infinitemac.org/1992/NeXTStep%203.0' },
+            { id: 'mac75', name: 'System 7.5', year: '1994', vendor: 'Apple', desc: 'دمج ميزات AppleGuide وشريط التحكم السريع.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/1994/System%207.5' },
+            { id: 'next40', name: 'NeXTSTEP 4.0 PR1', year: '1995', vendor: 'NeXT', desc: 'الجيل المتقدم من أنظمة NeXT.', cat: 'apple', icon: 'box', url: 'https://infinitemac.org/1995/NeXTSTEP%204.0%20PR1' },
+            { id: 'mac753', name: 'System 7.5.3', year: '1996', vendor: 'Apple', desc: 'تحديث نظام التشغيل الكلاسيكي الشهير.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/1996/System%207.5.3' },
+            { id: 'kanjitalk', name: 'KanjiTalk 7.5.3', year: '1996', vendor: 'Apple', desc: 'النسخة اليابانية المخصصة من نظام ماك.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/1996/KanjiTalk%207.5.3' },
+            { id: 'openstep', name: 'OPENSTEP 4.0', year: '1996', vendor: 'Apple/NeXT', desc: 'بيئة تطوير وأنظمة تشغيل موحدة.', cat: 'apple', icon: 'box', url: 'https://infinitemac.org/1996/OPENSTEP%204.0' },
+            { id: 'beosdr82', name: 'BeOS DR8.2 (Apple/Mac)', year: '1996', vendor: 'Be Inc.', desc: 'إصدار مبكر لنظام BeOS.', cat: 'apple', icon: 'gem', url: 'https://infinitemac.org/1996/BeOS%20DR8.2' },
+            { id: 'macos76', name: 'Mac OS 7.6', year: '1997', vendor: 'Apple', desc: 'أول إصدار يحمل رسمياً اسم Mac OS.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/1997/Mac%20OS%207.6' },
+            { id: 'beospr1', name: 'BeOS Preview Release 1', year: '1997', vendor: 'Be Inc.', desc: 'نسخة استعراضية من BeOS.', cat: 'apple', icon: 'gem', url: 'https://infinitemac.org/1997/BeOS%20Preview%20Release%201' },
+            { id: 'macos8', name: 'Mac OS 8.0', year: '1997', vendor: 'Apple', desc: 'تصميم جديد كلياً Aqua واجهة متطورة وسرعة هائلة.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/1997/Mac%20OS%208.0' },
+            { id: 'macos81', name: 'Mac OS 8.1', year: '1998', vendor: 'Apple', desc: 'دعم نظام الملفات HFS Plus الحديث.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/1998/Mac%20OS%208.1' },
+            { id: 'beos3', name: 'BeOS Release 3', year: '1998', vendor: 'Be Inc.', desc: 'إصدار استقراري لنظام BeOS.', cat: 'apple', icon: 'gem', url: 'https://infinitemac.org/1998/BeOS%20Release%203' },
+            { id: 'macos85', name: 'Mac OS 8.5', year: '1998', vendor: 'Apple', desc: 'دعم معالجات PowerPC بشكل حصري وسرعة فائقة.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/1998/Mac%20OS%208.5' },
+            { id: 'beos4', name: 'BeOS Release 4', year: '1998', vendor: 'Be Inc.', desc: 'تحديثات أداء واسعة.', cat: 'apple', icon: 'gem', url: 'https://infinitemac.org/1998/BeOS%20Release%204' },
+            { id: 'beos45', name: 'BeOS Release 4.5', year: '1999', vendor: 'Be Inc.', desc: 'إصدار تميز بدعم قوي للأجهزة.', cat: 'apple', icon: 'gem', url: 'https://infinitemac.org/1999/BeOS%20Release%204.5' },
+            { id: 'macos9', name: 'Mac OS 9.0', year: '1999', vendor: 'Apple', desc: 'النظام الأخير قبل الانتقال لعصر OS X الحديث.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/1999/Mac%20OS%209.0' },
+            { id: 'beospro', name: 'BeOS 5 Pro Edition', year: '2000', vendor: 'Be Inc.', desc: 'النسخة الاحترافية الكاملة.', cat: 'apple', icon: 'gem', url: 'https://infinitemac.org/2000/BeOS%205' },
+            { id: 'macosxbeta', name: 'Mac OS X 10.0 (Public Beta)', year: '2000', vendor: 'Apple', desc: 'النسخة التجريبية الأولى لواجهة Aqua ونواة Darwin.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/2000/Mac%20OS%20X%2010.0' },
+            { id: 'macosx100', name: 'Mac OS X 10.0', year: '2001', vendor: 'Apple', desc: 'الإصدار التجاري الأول من عائلة OS X.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/2001/Mac%20OS%20X%2010.0' },
+            { id: 'macosx101', name: 'Mac OS X 10.1', year: '2001', vendor: 'Apple', desc: 'تحسين الأداء العام وسرعة النظام.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/2001/Mac%20OS%20X%2010.1' },
+            { id: 'macosxjaguar', name: 'Mac OS X 10.2 (Jaguar)', year: '2002', vendor: 'Apple', desc: 'إصدار القط البري المميز بميزات البحث الفوري.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/2002/Mac%20OS%20X%2010.2' },
+            { id: 'macosxpanther', name: 'Mac OS X 10.3 (Panther)', year: '2003', vendor: 'Apple', desc: 'واجهة معدنية بالكامل وتطبيق Expose.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/2003/Mac%20OS%20X%2010.3' },
+            { id: 'macoxtiger', name: 'Mac OS X 10.4 (Tiger)', year: '2005', vendor: 'Apple', desc: 'أحد أنجح إصدارات أبل مع ميزة Spotlight و Dashboard.', cat: 'apple', icon: 'apple', url: 'https://infinitemac.org/2005/Mac%20OS%20X%2010.4' },
+            { id: 'macoslatest', name: 'macOS (أحدث نسخة ويب)', year: '2026', vendor: 'Apple Web', desc: 'محاكي ويب تفاعلي لأحدث بيئة تشغيل من أبل.', cat: 'apple', icon: 'globe', url: 'https://macos-web.app/' },
+
+            // --- LINUX SIMULATORS (12 Links) ---
+            { id: 'ubuntu', name: 'Ubuntu', year: '2026', vendor: 'Canonical', desc: 'توزيعة لينكس الأشهر عالمياً للمستخدمين والمطورين.', cat: 'linux', icon: 'disc', url: 'https://meulinux.com/en/simulator/ubuntu' },
+            { id: 'debian', name: 'Debian', year: '2026', vendor: 'Debian', desc: 'النظام الأكثر استقراراً واعتمادية في عالم السيرفرات.', cat: 'linux', icon: 'disc', url: 'https://meulinux.com/en/simulator/debian/' },
+            { id: 'mint', name: 'Linux Mint', year: '2026', vendor: 'Linux Mint', desc: 'البديل الأقوى والأسهل لمستخدمي ويندوز المنتقلين للينكس.', cat: 'linux', icon: 'disc', url: 'https://meulinux.com/en/simulator/mint/' },
+            { id: 'kali', name: 'Kali Linux', year: '2026', vendor: 'Offensive Security', desc: 'نظام اختبار الأمان والحماية والاختراق الشهير.', cat: 'linux', icon: 'shield', url: 'https://meulinux.com/en/simulator/kali/' },
+            { id: 'xubuntu', name: 'Xubuntu', year: '2026', vendor: 'Canonical', desc: 'نسخة خفيفة وسريعة من أبونتو تعتمد واجهة XFCE.', cat: 'linux', icon: 'disc', url: 'https://meulinux.com/en/simulator/xubuntu/' },
+            { id: 'zorin', name: 'Zorin OS', year: '2026', vendor: 'Zorin OS', desc: 'نظام بتصميم أنيق ومذهل يشبه ويندوز 11 تماماً.', cat: 'linux', icon: 'disc', url: 'https://meulinux.com/en/simulator/zorin/' },
+            { id: 'fedora', name: 'Fedora', year: '2026', vendor: 'Red Hat', desc: 'توزيعة التقنيات الحديثة والمتطورة من ريد هات.', cat: 'linux', icon: 'disc', url: 'https://meulinux.com/en/simulator/fedora/' },
+            { id: 'arch', name: 'Arch Linux', year: '2026', vendor: 'Arch Community', desc: 'النظام المفضل للمحترفين بخاصية التحديث المستمر.', cat: 'linux', icon: 'cpu', url: 'https://meulinux.com/en/simulator/arch/' },
+            { id: 'cachyos', name: 'CachyOS', year: '2026', vendor: 'CachyOS', desc: 'توزيعة ارتش محسنة خصيصاً لأقصى سرعة وأداء.', cat: 'linux', icon: 'zap', url: 'https://meulinux.com/en/simulator/cachyos/' },
+            { id: 'bazzite', name: 'Bazzite', year: '2026', vendor: 'Bazzite', desc: 'نظام الألعاب المخصص لبيئات الاستيم ديك والبيئات الرسومية.', cat: 'linux', icon: 'gamepad-2', url: 'https://meulinux.com/en/simulator/bazzite/' },
+            { id: 'tails', name: 'Tails', year: '2026', vendor: 'Tails Project', desc: 'نظام الخصوصية المطلقة والتصفح الخفي المجهر.', cat: 'linux', icon: 'lock', url: 'https://meulinux.com/en/simulator/tails/' },
+            { id: 'popos', name: 'Pop!_OS', year: '2026', vendor: 'System76', desc: 'نظام المطورين والمصممين واللاعبين الأنيق.', cat: 'linux', icon: 'disc', url: 'https://meulinux.com/en/simulator/popos/' },
+
+            // --- LINUX, BSD & UNIX ADVANCED v86 (22 Links) ---
+            { id: 'android', name: 'Android (v86)', year: '2026', vendor: 'Google / v86', desc: 'محاكاة نظام الهواتف الذكية أندرويد عبر معمارية x86.', cat: 'linux', icon: 'smartphone', url: 'https://copy.sh/v86/?profile=android' },
+            { id: 'archlinux86', name: 'Arch Linux (v86)', year: '2026', vendor: 'Arch', desc: 'تشغيل ارتش مباشرة بنواة v86 الافتراضية.', cat: 'linux', icon: 'cpu', url: 'https://copy.sh/v86/?profile=archlinux' },
+            { id: 'buildroot', name: 'Buildroot Linux', year: '2026', vendor: 'Open Source', desc: 'نظام مصغر ومخصص لتضمين الأنظمة.', cat: 'linux', icon: 'terminal', url: 'https://copy.sh/v86/?profile=buildroot' },
+            { id: 'dsl', name: 'Damn Small Linux', year: '2026', vendor: 'DSL Team', desc: 'توزيعة لينكس مصغرة جداً تعمل بموارد ضئيلة.', cat: 'linux', icon: 'disc', url: 'https://copy.sh/v86/?profile=dsl' },
+            { id: 'elks', name: 'ELKS', year: '2026', vendor: 'Open Source', desc: 'نظام شبيه بيونكس للمعالجات الدقيقة.', cat: 'linux', icon: 'terminal', url: 'https://copy.sh/v86/?profile=elks' },
+            { id: 'nodeos', name: 'NodeOS', year: '2026', vendor: 'NodeJS', desc: 'نظام تشغيل مبني بالكامل على بيئة Node.js.', cat: 'linux', icon: 'code', url: 'https://copy.sh/v86/?profile=nodeos' },
+            { id: 'tilck', name: 'Tilck', year: '2026', vendor: 'Open Source', desc: 'نظام متوافق مع لينكس وصغير الحجم.', cat: 'linux', icon: 'terminal', url: 'https://copy.sh/v86/?profile=tilck' },
+            { id: 'bsd386', name: '386BSD', year: '1992', vendor: 'BSD Team', desc: 'أحد أوائل أنظمة BSD المفتوحة لأجهزة 386.', cat: 'linux', icon: 'server', url: 'https://copy.sh/v86/?profile=386bsd' },
+            { id: 'freebsd', name: 'FreeBSD', year: '2026', vendor: 'FreeBSD Org', desc: 'نظام يونكس المفتوح الأقوى للخوادم والشبكات.', cat: 'linux', icon: 'server', url: 'https://copy.sh/v86/?profile=freebsd' },
+            { id: 'netbsd', name: 'NetBSD', year: '2026', vendor: 'NetBSD Org', desc: 'النظام الذي يعمل على أي عتاد في الكون.', cat: 'linux', icon: 'server', url: 'https://copy.sh/v86/?profile=netbsd' },
+            { id: 'openbsd', name: 'OpenBSD', year: '2026', vendor: 'OpenBSD Org', desc: 'النظام الأبرز عالمياً من حيث الأمان والتشفير.', cat: 'linux', icon: 'shield', url: 'https://copy.sh/v86/?profile=openbsd' },
+            { id: 'archhurd', name: 'Arch Hurd', year: '2026', vendor: 'Arch', desc: 'توزيعة ارتش بنواة GNU Hurd.', cat: 'linux', icon: 'cpu', url: 'https://copy.sh/v86/?profile=archhurd' },
+            { id: 'bsdos', name: 'BSD/OS', year: '1993', vendor: 'BSDi', desc: 'إصدار تجاري متقدم لأنظمة BSD.', cat: 'linux', icon: 'server', url: 'https://copy.sh/v86/?profile=bsdos' },
+            { id: 'fiwix', name: 'FiwixOS', year: '2026', vendor: 'Fiwix', desc: 'نظام شبيه بلينكس يعتمد التصميم التقليدي.', cat: 'linux', icon: 'terminal', url: 'https://copy.sh/v86/?profile=fiwix' },
+            { id: 'minix', name: 'Minix', year: '2026', vendor: 'Andrew Tanenbaum', desc: 'النظام التعليمي الشهير الذي ألهم طوروس بناء لينكس.', cat: 'linux', icon: 'book', url: 'https://copy.sh/v86/?profile=minix' },
+            { id: 'redox', name: 'Redox OS', year: '2026', vendor: 'Redox Team', desc: 'نظام تشغيل حديث مبني بلغة Rust الآمنة.', cat: 'linux', icon: 'shield', url: 'https://copy.sh/v86/?profile=redox' },
+            { id: 'serenity', name: 'SerenityOS', year: '2026', vendor: 'Andreas Kling', desc: 'نظام تشغيل رسومي مستقل ومصمم من الصفر بروح التسعينات.', cat: 'linux', icon: 'monitor', url: 'https://copy.sh/v86/?profile=serenity' },
+            { id: 'sortix', name: 'Sortix', year: '2026', vendor: 'Jonas Kulla', desc: 'نظام شبيه بيونكس مستقل ونظيف.', cat: 'linux', icon: 'terminal', url: 'https://copy.sh/v86/?profile=sortix' },
+            { id: 'soso', name: 'Soso OS', year: '2026', vendor: 'Hacker Community', desc: 'نظام تجريبي خفيف ومستقل.', cat: 'linux', icon: 'cpu', url: 'https://copy.sh/v86/?profile=soso' },
+            { id: 'syllable', name: 'Syllable', year: '2026', vendor: 'Syllable Team', desc: 'نظام تشغيل سطح مكتب خفيف وسريع.', cat: 'linux', icon: 'monitor', url: 'https://copy.sh/v86/?profile=syllable' },
+            { id: 'unixv7', name: 'Unix V7', year: '1979', vendor: 'Bell Labs', desc: 'النظام التاريخي العريق الذي قامت عليه معظم أنظمة يونكس.', cat: 'linux', icon: 'server', url: 'https://copy.sh/v86/?profile=unix-v7' },
+            { id: 'quantixos', name: 'QuantixOS', year: '2026', vendor: 'Open Source', desc: 'نظام تشغيل تجريبي متطور.', cat: 'linux', icon: 'cpu', url: 'https://copy.sh/v86/?profile=quantixos' },
+
+            // --- BEOS, AMIGA & PLAN 9 (8 Links) ---
+            { id: 'beos5', name: 'BeOS 5', year: '2000', vendor: 'Be Inc.', desc: 'نظام الوسائط المتعددة الأسطوري والسريع جداً.', cat: 'beos', icon: 'gem', url: 'https://copy.sh/v86/?profile=beos' },
+            { id: 'haiku', name: 'Haiku OS', year: '2026', vendor: 'Haiku Project', desc: 'الوريث الروحي المفتوح لنظام BeOS الأسطوري.', cat: 'beos', icon: 'feather', url: 'https://copy.sh/v86/?profile=haiku' },
+            { id: 'arosbroadway', name: 'AROS Broadway', year: '2026', vendor: 'AROS Team', desc: 'نظام متوافق مع أميغا أوس الحديث.', cat: 'beos', icon: 'box', url: 'https://copy.sh/v86/?profile=aros-broadway' },
+            { id: 'icaros', name: 'Icaros Desktop', year: '2026', vendor: 'Icaros', desc: 'توزيعة أميغا أوس متكاملة ومسلية.', cat: 'beos', icon: 'monitor', url: 'https://copy.sh/v86/?profile=icaros' },
+            { id: 'tinyaros', name: 'Tiny Aros', year: '2026', vendor: 'AROS', desc: 'نسخة خفيفة من نظام AROS.', cat: 'beos', icon: 'box', url: 'https://copy.sh/v86/?profile=tinyaros' },
+            { id: 'front9', name: '9front (Plan 9)', year: '2026', vendor: 'Plan 9 Community', desc: 'تطوير حديث لنظام Plan 9 المبتكر من مختبرات بيل.', cat: 'beos', icon: 'terminal', url: 'https://copy.sh/v86/?profile=9front' },
+            { id: 'legacy9', name: '9legacy', year: '2026', vendor: 'Plan 9', desc: 'دعم عتاد قديم لأنظمة Plan 9.', cat: 'beos', icon: 'terminal', url: 'https://copy.sh/v86/?profile=9legacy' },
+            { id: 'reactos', name: 'ReactOS', year: '2026', vendor: 'ReactOS Team', desc: 'النظام المجاني المفتوح المصدر المتوافق تماماً مع برامج ويندوز.', cat: 'beos', icon: 'cpu', url: 'https://copy.sh/v86/?profile=reactos' },
+
+            // --- DOS SYSTEMS (12 Links) ---
+            { id: 'dos86', name: '86-DOS', year: '1980', vendor: 'Seattle Computer', desc: 'النظام التاريخي الذي اشترته مايكروسوفت وتحول إلى MS-DOS.', cat: 'dos', icon: 'terminal', url: 'https://copy.sh/v86/?profile=86dos' },
+            { id: 'ibmexploring', name: 'Exploring IBM DOS', year: '1981', vendor: 'IBM', desc: 'إصدار توضيحي وتاريخي لنظام DOS الخاص بـ IBM.', cat: 'dos', icon: 'terminal', url: 'https://copy.sh/v86/?profile=ibm-exploring' },
+            { id: 'freedos', name: 'FreeDOS', year: '2026', vendor: 'FreeDOS Project', desc: 'نظام دوس المجاني لتشغيل البرامج والألعاب القديمة.', cat: 'dos', icon: 'terminal', url: 'https://copy.sh/v86/?profile=freedos' },
+            { id: 'freegem', name: 'FreeGEM', year: '2026', vendor: 'GEM Project', desc: 'واجهة رسومية فوق نظام FreeDOS.', cat: 'dos', icon: 'monitor', url: 'https://copy.sh/v86/?profile=freegem' },
+            { id: 'xcom', name: 'Xcom DOS', year: '2026', vendor: 'Custom DOS', desc: 'نظام دوس معدل ومخصص لتشغيل ألعاب XCOM.', cat: 'dos', icon: 'gamepad-2', url: 'https://copy.sh/v86/?profile=xcom' },
+            { id: 'msdos4', name: 'MS-DOS 4.0', year: '1988', vendor: 'Microsoft', desc: 'الإصدار الرابع من نظام دوس الشهير.', cat: 'dos', icon: 'terminal', url: 'https://copy.sh/v86/?profile=msdos4' },
+            { id: 'msdos622', name: 'MS-DOS 6.22', year: '1994', vendor: 'Microsoft', desc: 'الإصدار الأسطوري والأكثر استخداماً لعائلة DOS.', cat: 'dos', icon: 'terminal', url: 'https://copy.sh/v86/?profile=msdos' },
+            { id: 'pcmos', name: 'PC-MOS/386', year: '1987', vendor: 'The Software Link', desc: 'نظام تشغيل متعدد المستخدمين لمعالجات 386.', cat: 'dos', icon: 'server', url: 'https://copy.sh/v86/?profile=pcmos' },
+            { id: 'psychdos', name: 'PsychDOS', year: '2026', vendor: 'Open Source', desc: 'توزيعة دوس مخصصة ومعدلة.', cat: 'dos', icon: 'terminal', url: 'https://copy.sh/v86/?profile=psychdos' },
+            { id: 'leetos', name: 'lEEt/OS', year: '2026', vendor: 'Hacker', desc: 'نظام مبسط ومطور للمهتمين.', cat: 'dos', icon: 'terminal', url: 'https://copy.sh/v86/?profile=leetos' },
+            { id: 'doof', name: 'DOOF', year: '2026', vendor: 'Open Source', desc: 'نظام تشغيل تجريبي مبسط.', cat: 'dos', icon: 'terminal', url: 'https://copy.sh/v86/?profile=doof' },
+            { id: 'chimaeraos', name: 'Chimaera OS', year: '2026', vendor: 'Open Source', desc: 'نظام تجريبي مستقل.', cat: 'dos', icon: 'terminal', url: 'https://copy.sh/v86/?profile=chimaeraos' },
+
+            // --- EXPERIMENTAL & RETRO GAMES MUSEUMS ---
+            { id: 'webdesignflash', name: 'Flash Games Museum', year: '2026', vendor: 'Web Design Museum', desc: 'متحف ألعاب الفلاش الكلاسيكية التي صنعت ذكريات الطفولة على الويب.', cat: 'experimental', icon: 'gamepad-2', url: 'https://www.webdesignmuseum.org/flash-games' },
+            { id: 'doszone', name: 'DOS.Zone Retro Games', year: '2026', vendor: 'DOS.Zone', desc: 'المنصة الأشهر لتشغيل ألعاب دوس القديمة مباشرة في المتصفح.', cat: 'experimental', icon: 'gamepad-2', url: 'https://dos.zone/' },
+            { id: 'retrogamescz', name: 'RetroGames CZ', year: '2026', vendor: 'RetroGames CZ', desc: 'أرشيف ضخم لألعاب الكونسول والحواسيب الكلاسيكية.', cat: 'experimental', icon: 'gamepad-2', url: 'https://www.retrogames.cz/all.php?sort=pocitadlo&poradi=sestupne' },
+            { id: 'playretrogames', name: 'Play Retro Games', year: '2026', vendor: 'PlayRetroGames', desc: 'موقع مميز لتشغيل ألعاب الأتاري والنينتندو والسيجا ريترو.', cat: 'experimental', icon: 'gamepad-2', url: 'https://www.playretrogames.com/' },
+            { id: 'oldgamessk', name: 'OldGames.sk Online', year: '2026', vendor: 'OldGames SK', desc: 'منصة استعراض وتجربة ألعاب العصر الذهبي أونلاين.', cat: 'experimental', icon: 'gamepad-2', url: 'https://online.oldgames.sk/' },
+            { id: 'retrogamesonl', name: 'RetroGames Online', year: '2026', vendor: 'RetroGames Onl', desc: 'استمتع بألعاب الزمن الجميل مباشرة بدون تحميل.', cat: 'experimental', icon: 'gamepad-2', url: 'https://www.retrogames.onl/' },
+            { id: 'rec0ded88', name: 'Rec0ded Retro Games', year: '2026', vendor: 'Rec0ded88', desc: 'مكتبة ألعاب فيديو ريترو كلاسيكية مختارة بعناية.', cat: 'experimental', icon: 'gamepad-2', url: 'https://rec0ded88.com/play-retro-video-games/' },
+            { id: 'gamonl', name: 'Gam.onl Arcade', year: '2026', vendor: 'Gam.onl', desc: 'ألعاب متصفح وأركيد كلاسيكية سريعة وممتعة.', cat: 'experimental', icon: 'gamepad-2', url: 'https://gam.onl/' },
+            { id: 'webdesignmuseum', name: 'Web Design Museum', year: '2026', vendor: 'Web Design Museum', desc: 'متحف تاريخ تصميم مواقع الويب وتطور الواجهات الرقمية.', cat: 'experimental', icon: 'globe', url: 'https://www.webdesignmuseum.org/' },
+            { id: 'bleskos', name: 'BleskOS', year: '2026', vendor: 'BleskOS', desc: 'نظام تشغيل مستقل وخفيف جداً.', cat: 'experimental', icon: 'zap', url: 'https://copy.sh/v86/?profile=bleskos' },
+            { id: 'bootchess', name: 'BootChess', year: '2026', vendor: 'Game Dev', desc: 'لعبة شطرنج كاملة تعمل مباشرة عند الإقلاع.', cat: 'experimental', icon: 'gamepad-2', url: 'https://copy.sh/v86/?profile=bootchess' },
+            { id: 'floppybird', name: 'Floppy Bird', year: '2026', vendor: 'Game Dev', desc: 'لعبة فلابي بيرد تعمل مباشرة من قرص الإقلاع.', cat: 'experimental', icon: 'gamepad-2', url: 'https://copy.sh/v86/?profile=floppybird' },
+            { id: 'kolibrios', name: 'KolibriOS', year: '2026', vendor: 'Kolibri Team', desc: 'نظام أسطوري مكتوب بلغة التجميع (Assembly) بالكامل وسريع للغاية.', cat: 'experimental', icon: 'zap', url: 'https://copy.sh/v86/?profile=kolibrios' },
+            { id: 'tetros', name: 'TetrOS', year: '2026', vendor: 'Game Dev', desc: 'لعبة تتريس تعمل مباشرة كنظام إقلاع.', cat: 'experimental', icon: 'gamepad-2', url: 'https://copy.sh/v86/?profile=tetros' },
+            { id: 'toaruos', name: 'ToaruOS', year: '2026', vendor: 'Klang', desc: 'نظام تشغيل مستقل مع واجهة رسومية خاصة به.', cat: 'experimental', icon: 'monitor', url: 'https://copy.sh/v86/?profile=toaruos' }
+        ];
+
+        let currentCategory = 'all';
+        let currentSystem = null;
+        let isCRT = false;
+        let favorites = JSON.parse(localStorage.getItem('all-os_favs') || '[]');
+        let isFavFilter = false;
+        let currentMode = 'dark';
+        let currentTheme = 'original';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            renderSystems();
+            updateCategoryCounts();
+        });
+
+        function renderSystems() {
+            const container = document.getElementById('systems-list');
+            container.innerHTML = '';
+
+            let filtered = systemsData;
+            if (currentCategory !== 'all') {
+                filtered = filtered.filter(s => s.cat === currentCategory);
+            }
+            if (isFavFilter) {
+                filtered = filtered.filter(s => favorites.includes(s.id));
+            }
+
+            const searchVal = document.getElementById('search-input').value.toLowerCase();
+            if (searchVal) {
+                filtered = filtered.filter(s => s.name.toLowerCase().includes(searchVal) || s.desc.toLowerCase().includes(searchVal));
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="p-6 text-center text-xs opacity-70">لا توجد أنظمة مطابقة للبحث</div>`;
+                return;
+            }
+
+            filtered.forEach(sys => {
+                const isFav = favorites.includes(sys.id);
+                const isActive = currentSystem && currentSystem.id === sys.id;
+                
+                const card = document.createElement('div');
+                const cardStyle = currentMode === 'light' ? 'bg-white/70 border-slate-200 text-slate-800 hover:border-sky-500' : 'bg-slate-900/60 border-slate-800/80 text-slate-100 hover:border-sky-500/40';
+                card.className = `system-card p-3 rounded-2xl border cursor-pointer flex items-center justify-between group ${isActive ? 'active' : ''} ${cardStyle}`;
+                card.onclick = () => loadSystem(sys);
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 shrink-0 group-hover:scale-105 transition">
+                            <i data-lucide="${sys.icon || 'monitor'}" class="w-5 h-5"></i>
+                        </div>
+                        <div class="overflow-hidden">
+                            <h4 class="font-bold text-xs truncate group-hover:text-sky-500 transition">${sys.name}</h4>
+                            <p class="text-[10px] opacity-70 truncate">${sys.vendor} • ${sys.year}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button onclick="event.stopPropagation(); toggleFav('${sys.id}')" class="p-1.5 rounded-lg hover:bg-slate-800/20 text-slate-400 hover:text-yellow-400 transition">
+                            <i data-lucide="star" class="w-3.5 h-3.5 ${isFav ? 'fill-yellow-400 text-yellow-400' : ''}"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function loadSystem(sys) {
+            currentSystem = sys;
+            document.getElementById('welcome-screen').classList.add('hidden');
+            
+            const loader = document.getElementById('loader');
+            loader.classList.remove('opacity-0');
+            loader.style.pointerEvents = 'auto';
+            
+            document.getElementById('loader-text').innerText = `جاري تحميل ${sys.name}...`;
+
+            const frame = document.getElementById('emulator-frame');
+            frame.src = sys.url;
+
+            frame.onload = () => {
+                loader.classList.add('opacity-0');
+                loader.style.pointerEvents = 'none';
+            };
+
+            setTimeout(() => {
+                loader.classList.add('opacity-0');
+                loader.style.pointerEvents = 'none';
+            }, 2500);
+
+            document.getElementById('active-system-name').innerHTML = `<i data-lucide="${sys.icon}" class="w-4 h-4 text-sky-400"></i> ${sys.name}`;
+            document.getElementById('active-fav-btn').classList.remove('hidden');
+            document.getElementById('wiki-btn').classList.remove('hidden');
+            updateActiveFavIcon();
+            renderSystems();
+            lucide.createIcons();
+        }
+
+        function setCategory(cat) {
+            currentCategory = cat;
+            document.querySelectorAll('.cat-pill').forEach(btn => {
+                if (btn.dataset.cat === cat) {
+                    btn.classList.add('bg-sky-600', 'text-white', 'font-bold');
+                    btn.classList.remove('bg-slate-800', 'text-slate-300', 'bg-slate-200', 'text-slate-700');
+                } else {
+                    btn.classList.remove('bg-sky-600', 'text-white', 'font-bold');
+                    const isLight = currentMode === 'light';
+                    btn.classList.add(isLight ? 'bg-slate-200' : 'bg-slate-800', isLight ? 'text-slate-700' : 'text-slate-300');
+                }
+            });
+            renderSystems();
+        }
+
+        function filterSystems() {
+            renderSystems();
+        }
+
+        function toggleFav(id) {
+            if (favorites.includes(id)) {
+                favorites = favorites.filter(f => f !== id);
+            } else {
+                favorites.push(id);
+            }
+            localStorage.setItem('all-os_favs', JSON.stringify(favorites));
+            renderSystems();
+            updateActiveFavIcon();
+        }
+
+        function toggleActiveFav() {
+            if (currentSystem) {
+                toggleFav(currentSystem.id);
+            }
+        }
+
+        function updateActiveFavIcon() {
+            if (!currentSystem) return;
+            const isFav = favorites.includes(currentSystem.id);
+            const btn = document.getElementById('active-fav-btn');
+            btn.innerHTML = `<i data-lucide="star" class="w-4 h-4 ${isFav ? 'fill-yellow-400 text-yellow-400' : ''}"></i>`;
+            lucide.createIcons();
+        }
+
+        function toggleCRTMode() {
+            isCRT = !isCRT;
+            const container = document.getElementById('emulator-container');
+            const btn = document.getElementById('crt-btn');
+            if (isCRT) {
+                container.classList.add('crt-overlay');
+                btn.classList.add('text-sky-400', 'bg-slate-800/50');
+            } else {
+                container.classList.remove('crt-overlay');
+                btn.classList.remove('text-sky-400', 'bg-slate-800/50');
+            }
+        }
+
+        function reloadFrame() {
+            if (currentSystem) {
+                loadSystem(currentSystem);
+            }
+        }
+
+        function openExternal() {
+            if (currentSystem) {
+                window.open(currentSystem.url, '_blank');
+            }
+        }
+
+        function toggleFullscreen() {
+            const elem = document.getElementById('emulator-container');
+            if (!document.fullscreenElement) {
+                elem.requestFullscreen().catch(err => {
+                    alert(`Fullscreen Error: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function goHome() {
+            currentSystem = null;
+            document.getElementById('welcome-screen').classList.remove('hidden');
+            document.getElementById('emulator-frame').src = '';
+            document.getElementById('active-system-name').innerHTML = `<i data-lucide="monitor" class="w-4 h-4"></i> <span>لم يتم اختيار نظام</span>`;
+            document.getElementById('active-fav-btn').classList.add('hidden');
+            document.getElementById('wiki-btn').classList.add('hidden');
+            renderSystems();
+            lucide.createIcons();
+        }
+
+        function openWikiModal() {
+            if (!currentSystem) return;
+            document.getElementById('wiki-title').innerText = `${currentSystem.name} - Wikipedia Archive`;
+            document.getElementById('wiki-year').innerText = currentSystem.year;
+            document.getElementById('wiki-vendor').innerText = currentSystem.vendor;
+            document.getElementById('wiki-desc').innerText = currentSystem.desc;
+            document.getElementById('wiki-modal').classList.remove('hidden');
+        }
+
+        function closeWikiModal() {
+            document.getElementById('wiki-modal').classList.add('hidden');
+        }
+
+        function openTimelineModal() {
+            const container = document.getElementById('timeline-list-container');
+            container.innerHTML = '';
+
+            const sorted = [...systemsData].sort((a, b) => parseInt(a.year) - parseInt(b.year));
+            const cardBg = currentMode === 'light' ? 'bg-slate-100 border-slate-200 text-slate-900' : 'bg-slate-950 border-slate-800 text-slate-200';
+
+            sorted.forEach(sys => {
+                const item = document.createElement('div');
+                item.className = `p-4 rounded-2xl border space-y-2 ${cardBg}`;
+                item.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-bold text-sm text-sky-500 flex items-center gap-2">
+                            <i data-lucide="${sys.icon || 'monitor'}" class="w-4 h-4"></i> ${sys.name}
+                        </h4>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-400 font-bold">${sys.year} • ${sys.vendor}</span>
+                    </div>
+                    <p class="text-xs opacity-90 leading-relaxed">${sys.desc}</p>
+                `;
+                container.appendChild(item);
+            });
+
+            document.getElementById('timeline-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeTimelineModal() {
+            document.getElementById('timeline-modal').classList.add('hidden');
+        }
+
+        function openSettingsModal() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        function changeBrightness(val) {
+            document.documentElement.style.setProperty('--screen-brightness', val);
+            document.getElementById('bright-val').innerText = `${Math.round(val * 100)}%`;
+        }
+
+        // Mode Switcher (Light / Dark)
+        function setMode(mode) {
+            currentMode = mode;
+            const body = document.getElementById('app-body');
+            const darkBtn = document.getElementById('mode-dark-btn');
+            const lightBtn = document.getElementById('mode-light-btn');
+
+            body.classList.remove('dark-mode', 'light-mode');
+            body.classList.add(mode === 'light' ? 'light-mode' : 'dark-mode');
+
+            if (mode === 'light') {
+                lightBtn.className = "p-2.5 border rounded-xl flex items-center justify-center gap-2 text-xs font-bold bg-sky-600/20 border-sky-500 text-sky-600";
+                darkBtn.className = "p-2.5 border rounded-xl flex items-center justify-center gap-2 text-xs font-bold border-slate-700 text-slate-300";
+            } else {
+                darkBtn.className = "p-2.5 border rounded-xl flex items-center justify-center gap-2 text-xs font-bold bg-sky-600/20 border-sky-500 text-sky-400";
+                lightBtn.className = "p-2.5 border rounded-xl flex items-center justify-center gap-2 text-xs font-bold border-slate-700 text-slate-300";
+            }
+            renderSystems();
+        }
+
+        // 3 Specific Themes Switcher
+        function setAppTheme(themeName) {
+            currentTheme = themeName;
+            const body = document.getElementById('app-body');
+            const origBtn = document.getElementById('theme-original-btn');
+            const aeroBtn = document.getElementById('theme-aero-btn');
+            const retroBtn = document.getElementById('theme-retro-btn');
+
+            body.classList.remove('theme-original', 'theme-aero', 'theme-retro');
+            origBtn.className = "p-2.5 border rounded-xl flex flex-col items-center justify-center gap-1 text-xs font-bold border-slate-700 text-slate-300";
+            aeroBtn.className = "p-2.5 border rounded-xl flex flex-col items-center justify-center gap-1 text-xs font-bold border-slate-700 text-slate-300";
+            retroBtn.className = "p-2.5 border rounded-xl flex flex-col items-center justify-center gap-1 text-xs font-bold border-slate-700 text-slate-300";
+
+            if (themeName === 'original') {
+                body.classList.add('theme-original');
+                origBtn.className = "p-2.5 border rounded-xl flex flex-col items-center justify-center gap-1 text-xs font-bold bg-sky-600/20 border-sky-500 text-sky-400";
+            } else if (themeName === 'aero') {
+                body.classList.add('theme-aero');
+                aeroBtn.className = "p-2.5 border rounded-xl flex flex-col items-center justify-center gap-1 text-xs font-bold bg-sky-600/20 border-sky-500 text-sky-400";
+            } else if (themeName === 'retro') {
+                body.classList.add('theme-retro');
+                retroBtn.className = "p-2.5 border rounded-xl flex flex-col items-center justify-center gap-1 text-xs font-bold bg-amber-600/20 border-amber-500 text-amber-300";
+            }
+        }
+
+        function updateCategoryCounts() {
+            const total = systemsData.length;
+            document.getElementById('header-total-count').innerText = total;
+            document.getElementById('dash-val-systems').innerText = `${total} نظام وإصدار`;
+            document.getElementById('count-all').innerText = total;
+            document.getElementById('count-windows').innerText = systemsData.filter(s => s.cat === 'windows').length;
+            document.getElementById('count-apple').innerText = systemsData.filter(s => s.cat === 'apple').length;
+            document.getElementById('count-linux').innerText = systemsData.filter(s => s.cat === 'linux').length;
+            document.getElementById('count-beos').innerText = systemsData.filter(s => s.cat === 'beos').length;
+            document.getElementById('count-dos').innerText = systemsData.filter(s => s.cat === 'dos').length;
+            document.getElementById('count-experimental').innerText = systemsData.filter(s => s.cat === 'experimental').length;
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('w-0');
+            sidebar.classList.toggle('w-80');
+            sidebar.classList.toggle('opacity-0');
+        }
+    </script>
+</body>
+</html>

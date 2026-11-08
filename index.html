@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" id="app-root" class="dark">
 <head>
+<meta name="google-site-verification" content="IYV4JBqVR5O6oOw4DbVsxr5uFsBZS1Z82Daa-MWq3Uk" />
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title id="site-title">All-OS - متحف محاكاة أنظمة التشغيل الشامل</title>
@@ -101,18 +102,44 @@
             animation: pulse-green 1.5s infinite;
         }
 
+        /* --- Pure White Light Mode Overrides --- */
+        body.light-mode {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+        }
+        body.light-mode #main-header,
+        body.light-mode #cat-bar,
+        body.light-mode #sidebar,
+        body.light-mode #toolbar {
+            background-color: #ffffff !important;
+            border-color: #e2e8f0 !important;
+            color: #0f172a !important;
+        }
+        body.light-mode #search-input {
+            background-color: #f8fafc !important;
+            border-color: #cbd5e1 !important;
+            color: #0f172a !important;
+        }
+        body.light-mode .system-card {
+            background-color: #ffffff !important;
+            border-color: #e2e8f0 !important;
+            color: #0f172a !important;
+        }
+        body.light-mode .system-card:hover {
+            border-color: #0284c7 !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
         /* --- 3 Themes & Light/Dark Modes --- */
-        /* 1. Original Theme */
         body.theme-original.dark-mode { background-color: #030712 !important; color: #f8fafc !important; }
-        body.theme-original.light-mode { background-color: #f8fafc !important; color: #0f172a !important; }
 
         /* 2. Aero Glass Theme */
         body.theme-aero.dark-mode { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0f172a 100%) !important; color: #e2e8f0 !important; }
-        body.theme-aero.light-mode { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #e0f2fe 100%) !important; color: #0369a1 !important; }
+        body.theme-aero.light-mode { background: #ffffff !important; color: #0369a1 !important; }
 
         /* 3. Retro 32-bit Theme */
         body.theme-retro.dark-mode { background-color: #005555 !important; color: #ffffff !important; }
-        body.theme-retro.light-mode { background-color: #008080 !important; color: #ffffff !important; }
+        body.theme-retro.light-mode { background-color: #ffffff !important; color: #005555 !important; }
     </style>
 </head>
 <body class="h-screen w-screen flex flex-col antialiased select-none theme-original dark-mode transition-colors" id="app-body">
@@ -142,7 +169,7 @@
 
         <!-- Search Bar -->
         <div class="relative w-44 sm:w-80">
-            <input type="text" id="search-input" oninput="filterSystems()" placeholder="ابحث عن أي نظام تشغيل أو لعبة..." 
+            <input type="text" id="search-input" oninput="filterSystems()" placeholder="ابحث عن أي نظام تشغيل..." 
                    class="w-full bg-slate-900/80 text-xs rounded-full pl-3 pr-9 py-2 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 transition">
             <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute right-3 top-2.5"></i>
         </div>
@@ -169,12 +196,12 @@
     <!-- Category Pills Bar -->
     <div id="cat-bar" class="bg-slate-900/90 border-b border-slate-800 px-4 py-2 flex items-center gap-2 overflow-x-auto text-xs z-20 shrink-0 transition-colors">
         <button onclick="setCategory('all')" class="cat-pill active px-3.5 py-1.5 rounded-full bg-sky-600 text-white font-bold hover:bg-sky-500 transition whitespace-nowrap" data-cat="all">الكل (<span id="count-all">0</span>)</button>
+        <button onclick="setCategory('debug')" class="cat-pill px-3.5 py-1.5 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap" data-cat="debug">🐞 Debug (<span id="count-debug">0</span>)</button>
         <button onclick="setCategory('windows')" class="cat-pill px-3.5 py-1.5 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap" data-cat="windows">💻 Windows (<span id="count-windows">0</span>)</button>
         <button onclick="setCategory('apple')" class="cat-pill px-3.5 py-1.5 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap" data-cat="apple">🍎 Apple / Mac (<span id="count-apple">0</span>)</button>
         <button onclick="setCategory('linux')" class="cat-pill px-3.5 py-1.5 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap" data-cat="linux">🐧 Linux & Unix (<span id="count-linux">0</span>)</button>
         <button onclick="setCategory('beos')" class="cat-pill px-3.5 py-1.5 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap" data-cat="beos">💎 BeOS & Amiga (<span id="count-beos">0</span>)</button>
         <button onclick="setCategory('dos')" class="cat-pill px-3.5 py-1.5 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap" data-cat="dos">📟 DOS Systems (<span id="count-dos">0</span>)</button>
-        <button onclick="setCategory('experimental')" class="cat-pill px-3.5 py-1.5 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap" data-cat="experimental">🧪 Experimental & Games (<span id="count-experimental">0</span>)</button>
     </div>
 
     <!-- Main Content Area -->
@@ -246,7 +273,7 @@
                                 👾All-OS👾
                             </h2>
                             <p class="text-xs sm:text-sm text-slate-400 font-medium">
-                                استكشف وشغل مئات أنظمة التشغيل التاريخية، التوزيعات الحديثة، وألعاب الريترو العريقة مباشرة من متصفحك وبدون أي تثبيت.
+                                استكشف وشغل مئات أنظمة التشغيل التاريخية والتوزيعات الحديثة مباشرة من متصفحك وبدون أي تثبيت.
                             </p>
                         </div>
                         <div class="flex items-center gap-3 bg-slate-900/80 border border-slate-800 p-3 rounded-2xl shadow-xl">
@@ -255,7 +282,7 @@
                             </div>
                             <div>
                                 <span class="text-[10px] text-slate-400 block">حالة الخوادم الحية</span>
-                                <strong class="text-xs text-emerald-400" id="dash-val-systems">110+ نظام وإصدار</strong>
+                                <strong class="text-xs text-emerald-400" id="dash-val-systems">100+ نظام وإصدار</strong>
                             </div>
                         </div>
                     </div>
@@ -296,14 +323,14 @@
                             </div>
                         </div>
 
-                        <!-- Retro Games Card -->
-                        <div onclick="setCategory('experimental')" class="group p-5 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-sky-500/50 cursor-pointer transition shadow-lg hover:shadow-sky-500/10 space-y-3">
+                        <!-- DOS Card -->
+                        <div onclick="setCategory('dos')" class="group p-5 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-sky-500/50 cursor-pointer transition shadow-lg hover:shadow-sky-500/10 space-y-3">
                             <div class="w-12 h-12 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400 group-hover:scale-110 transition">
-                                <i data-lucide="gamepad-2" class="w-6 h-6"></i>
+                                <i data-lucide="terminal" class="w-6 h-6"></i>
                             </div>
                             <div>
-                                <h3 class="font-bold text-sm text-white group-hover:text-yellow-400 transition">ألعاب الريترو والفلاش</h3>
-                                <p class="text-[11px] text-slate-400 mt-0.5">متاحف ألعاب التسعينات ودوس زون العريقة</p>
+                                <h3 class="font-bold text-sm text-white group-hover:text-yellow-400 transition">أنظمة DOS التاريخية</h3>
+                                <p class="text-[11px] text-slate-400 mt-0.5">MS-DOS و FreeDOS والإصدارات الأولى</p>
                             </div>
                         </div>
 
@@ -397,8 +424,6 @@
                 </div>
             </div>
 
-            <!--3 Custom Themes Picker -->
-            <div class="space-y-2">
             <!-- Brightness Slider -->
             <div class="space-y-2">
                 <div class="flex justify-between items-center text-xs font-bold">
@@ -417,6 +442,9 @@
     <!-- JavaScript Data and Logic -->
     <script>
         const systemsData = [
+            // --- DEBUG SECTION ---
+            { id: 'v86debug', name: 'v86 Debug Mode', year: '2026', vendor: 'v86 Project', desc: 'أداة التصحيح والـ Debug الخاصة بمحاكي v86 الاختباري.', cat: 'debug', icon: 'bug', url: 'https://copy.sh/v86/debug.html' },
+
             // --- WINDOWS (21 Links) ---
             { id: 'win1', name: 'Windows 1.01', year: '1985', vendor: 'Microsoft', desc: 'أول إصدار من بيئة ويندوز الرسومية التي أطلقتها مايكروسوفت لتعمل فوق نظام MS-DOS.', cat: 'windows', icon: 'monitor', url: 'https://copy.sh/v86/?profile=windows1' },
             { id: 'win2', name: 'Windows 2.0', year: '1987', vendor: 'Microsoft', desc: 'إصدار تميز بإمكانية تداخل النوافذ واستخدام اختصارات الكيبورد المتقدمة.', cat: 'windows', icon: 'monitor', url: 'https://copy.sh/v86/?profile=windows2' },
@@ -539,25 +567,8 @@
             { id: 'pcmos', name: 'PC-MOS/386', year: '1987', vendor: 'The Software Link', desc: 'نظام تشغيل متعدد المستخدمين لمعالجات 386.', cat: 'dos', icon: 'server', url: 'https://copy.sh/v86/?profile=pcmos' },
             { id: 'psychdos', name: 'PsychDOS', year: '2026', vendor: 'Open Source', desc: 'توزيعة دوس مخصصة ومعدلة.', cat: 'dos', icon: 'terminal', url: 'https://copy.sh/v86/?profile=psychdos' },
             { id: 'leetos', name: 'lEEt/OS', year: '2026', vendor: 'Hacker', desc: 'نظام مبسط ومطور للمهتمين.', cat: 'dos', icon: 'terminal', url: 'https://copy.sh/v86/?profile=leetos' },
-            { id: 'doof', name: 'DOOF', year: '2026', vendor: 'Open Source', desc: 'نظام تشغيل تجريبي مبسط.', cat: 'dos', icon: 'terminal', url: 'https://copy.sh/v86/?profile=doof' },
-            { id: 'chimaeraos', name: 'Chimaera OS', year: '2026', vendor: 'Open Source', desc: 'نظام تجريبي مستقل.', cat: 'dos', icon: 'terminal', url: 'https://copy.sh/v86/?profile=chimaeraos' },
-
-            // --- EXPERIMENTAL & RETRO GAMES MUSEUMS ---
-            { id: 'webdesignflash', name: 'Flash Games Museum', year: '2026', vendor: 'Web Design Museum', desc: 'متحف ألعاب الفلاش الكلاسيكية التي صنعت ذكريات الطفولة على الويب.', cat: 'experimental', icon: 'gamepad-2', url: 'https://www.webdesignmuseum.org/flash-games' },
-            { id: 'doszone', name: 'DOS.Zone Retro Games', year: '2026', vendor: 'DOS.Zone', desc: 'المنصة الأشهر لتشغيل ألعاب دوس القديمة مباشرة في المتصفح.', cat: 'experimental', icon: 'gamepad-2', url: 'https://dos.zone/' },
-            { id: 'retrogamescz', name: 'RetroGames CZ', year: '2026', vendor: 'RetroGames CZ', desc: 'أرشيف ضخم لألعاب الكونسول والحواسيب الكلاسيكية.', cat: 'experimental', icon: 'gamepad-2', url: 'https://www.retrogames.cz/all.php?sort=pocitadlo&poradi=sestupne' },
-            { id: 'playretrogames', name: 'Play Retro Games', year: '2026', vendor: 'PlayRetroGames', desc: 'موقع مميز لتشغيل ألعاب الأتاري والنينتندو والسيجا ريترو.', cat: 'experimental', icon: 'gamepad-2', url: 'https://www.playretrogames.com/' },
-            { id: 'oldgamessk', name: 'OldGames.sk Online', year: '2026', vendor: 'OldGames SK', desc: 'منصة استعراض وتجربة ألعاب العصر الذهبي أونلاين.', cat: 'experimental', icon: 'gamepad-2', url: 'https://online.oldgames.sk/' },
-            { id: 'retrogamesonl', name: 'RetroGames Online', year: '2026', vendor: 'RetroGames Onl', desc: 'استمتع بألعاب الزمن الجميل مباشرة بدون تحميل.', cat: 'experimental', icon: 'gamepad-2', url: 'https://www.retrogames.onl/' },
-            { id: 'rec0ded88', name: 'Rec0ded Retro Games', year: '2026', vendor: 'Rec0ded88', desc: 'مكتبة ألعاب فيديو ريترو كلاسيكية مختارة بعناية.', cat: 'experimental', icon: 'gamepad-2', url: 'https://rec0ded88.com/play-retro-video-games/' },
-            { id: 'gamonl', name: 'Gam.onl Arcade', year: '2026', vendor: 'Gam.onl', desc: 'ألعاب متصفح وأركيد كلاسيكية سريعة وممتعة.', cat: 'experimental', icon: 'gamepad-2', url: 'https://gam.onl/' },
-            { id: 'webdesignmuseum', name: 'Web Design Museum', year: '2026', vendor: 'Web Design Museum', desc: 'متحف تاريخ تصميم مواقع الويب وتطور الواجهات الرقمية.', cat: 'experimental', icon: 'globe', url: 'https://www.webdesignmuseum.org/' },
-            { id: 'bleskos', name: 'BleskOS', year: '2026', vendor: 'BleskOS', desc: 'نظام تشغيل مستقل وخفيف جداً.', cat: 'experimental', icon: 'zap', url: 'https://copy.sh/v86/?profile=bleskos' },
-            { id: 'bootchess', name: 'BootChess', year: '2026', vendor: 'Game Dev', desc: 'لعبة شطرنج كاملة تعمل مباشرة عند الإقلاع.', cat: 'experimental', icon: 'gamepad-2', url: 'https://copy.sh/v86/?profile=bootchess' },
-            { id: 'floppybird', name: 'Floppy Bird', year: '2026', vendor: 'Game Dev', desc: 'لعبة فلابي بيرد تعمل مباشرة من قرص الإقلاع.', cat: 'experimental', icon: 'gamepad-2', url: 'https://copy.sh/v86/?profile=floppybird' },
-            { id: 'kolibrios', name: 'KolibriOS', year: '2026', vendor: 'Kolibri Team', desc: 'نظام أسطوري مكتوب بلغة التجميع (Assembly) بالكامل وسريع للغاية.', cat: 'experimental', icon: 'zap', url: 'https://copy.sh/v86/?profile=kolibrios' },
-            { id: 'tetros', name: 'TetrOS', year: '2026', vendor: 'Game Dev', desc: 'لعبة تتريس تعمل مباشرة كنظام إقلاع.', cat: 'experimental', icon: 'gamepad-2', url: 'https://copy.sh/v86/?profile=tetros' },
-            { id: 'toaruos', name: 'ToaruOS', year: '2026', vendor: 'Klang', desc: 'نظام تشغيل مستقل مع واجهة رسومية خاصة به.', cat: 'experimental', icon: 'monitor', url: 'https://copy.sh/v86/?profile=toaruos' }
+            { id: 'doof', name: 'DOOF', year: '2026', vendor: 'Open Source', desc: 'نظام تجريبي مبسط.', cat: 'dos', icon: 'terminal', url: 'https://copy.sh/v86/?profile=doof' },
+            { id: 'chimaeraos', name: 'Chimaera OS', year: '2026', vendor: 'Open Source', desc: 'نظام تجريبي مستقل.', cat: 'dos', icon: 'terminal', url: 'https://copy.sh/v86/?profile=chimaeraos' }
         ];
 
         let currentCategory = 'all';
@@ -601,7 +612,7 @@
                 const isActive = currentSystem && currentSystem.id === sys.id;
                 
                 const card = document.createElement('div');
-                const cardStyle = currentMode === 'light' ? 'bg-white/70 border-slate-200 text-slate-800 hover:border-sky-500' : 'bg-slate-900/60 border-slate-800/80 text-slate-100 hover:border-sky-500/40';
+                const cardStyle = currentMode === 'light' ? 'bg-white border-slate-200 text-slate-800 hover:border-sky-500' : 'bg-slate-900/60 border-slate-800/80 text-slate-100 hover:border-sky-500/40';
                 card.className = `system-card p-3 rounded-2xl border cursor-pointer flex items-center justify-between group ${isActive ? 'active' : ''} ${cardStyle}`;
                 card.onclick = () => loadSystem(sys);
 
@@ -662,11 +673,11 @@
             document.querySelectorAll('.cat-pill').forEach(btn => {
                 if (btn.dataset.cat === cat) {
                     btn.classList.add('bg-sky-600', 'text-white', 'font-bold');
-                    btn.classList.remove('bg-slate-800', 'text-slate-300', 'bg-slate-200', 'text-slate-700');
+                    btn.classList.remove('bg-slate-800', 'text-slate-300', 'bg-slate-100', 'text-slate-700');
                 } else {
                     btn.classList.remove('bg-sky-600', 'text-white', 'font-bold');
                     const isLight = currentMode === 'light';
-                    btn.classList.add(isLight ? 'bg-slate-200' : 'bg-slate-800', isLight ? 'text-slate-700' : 'text-slate-300');
+                    btn.classList.add(isLight ? 'bg-slate-100' : 'bg-slate-800', isLight ? 'text-slate-700' : 'text-slate-300');
                 }
             });
             renderSystems();
@@ -824,42 +835,17 @@
             renderSystems();
         }
 
-        // 3 Specific Themes Switcher
-        function setAppTheme(themeName) {
-            currentTheme = themeName;
-            const body = document.getElementById('app-body');
-            const origBtn = document.getElementById('theme-original-btn');
-            const aeroBtn = document.getElementById('theme-aero-btn');
-            const retroBtn = document.getElementById('theme-retro-btn');
-
-            body.classList.remove('theme-original', 'theme-aero', 'theme-retro');
-            origBtn.className = "p-2.5 border rounded-xl flex flex-col items-center justify-center gap-1 text-xs font-bold border-slate-700 text-slate-300";
-            aeroBtn.className = "p-2.5 border rounded-xl flex flex-col items-center justify-center gap-1 text-xs font-bold border-slate-700 text-slate-300";
-            retroBtn.className = "p-2.5 border rounded-xl flex flex-col items-center justify-center gap-1 text-xs font-bold border-slate-700 text-slate-300";
-
-            if (themeName === 'original') {
-                body.classList.add('theme-original');
-                origBtn.className = "p-2.5 border rounded-xl flex flex-col items-center justify-center gap-1 text-xs font-bold bg-sky-600/20 border-sky-500 text-sky-400";
-            } else if (themeName === 'aero') {
-                body.classList.add('theme-aero');
-                aeroBtn.className = "p-2.5 border rounded-xl flex flex-col items-center justify-center gap-1 text-xs font-bold bg-sky-600/20 border-sky-500 text-sky-400";
-            } else if (themeName === 'retro') {
-                body.classList.add('theme-retro');
-                retroBtn.className = "p-2.5 border rounded-xl flex flex-col items-center justify-center gap-1 text-xs font-bold bg-amber-600/20 border-amber-500 text-amber-300";
-            }
-        }
-
         function updateCategoryCounts() {
             const total = systemsData.length;
             document.getElementById('header-total-count').innerText = total;
             document.getElementById('dash-val-systems').innerText = `${total} نظام وإصدار`;
             document.getElementById('count-all').innerText = total;
+            document.getElementById('count-debug').innerText = systemsData.filter(s => s.cat === 'debug').length;
             document.getElementById('count-windows').innerText = systemsData.filter(s => s.cat === 'windows').length;
             document.getElementById('count-apple').innerText = systemsData.filter(s => s.cat === 'apple').length;
             document.getElementById('count-linux').innerText = systemsData.filter(s => s.cat === 'linux').length;
             document.getElementById('count-beos').innerText = systemsData.filter(s => s.cat === 'beos').length;
             document.getElementById('count-dos').innerText = systemsData.filter(s => s.cat === 'dos').length;
-            document.getElementById('count-experimental').innerText = systemsData.filter(s => s.cat === 'experimental').length;
         }
 
         function toggleSidebar() {
